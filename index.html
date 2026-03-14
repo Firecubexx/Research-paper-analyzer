@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Uttam Research Paper Analyzer</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+color:white;
+text-align:center;
+padding:40px;
+}
+
+.container{
+background:#ffffff10;
+padding:40px;
+border-radius:10px;
+width:750px;
+margin:auto;
+}
+
+button{
+padding:10px 20px;
+border:none;
+background:#00c6ff;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+.result{
+margin-top:20px;
+background:#00000040;
+padding:20px;
+border-radius:6px;
+text-align:left;
+white-space:pre-wrap;
+max-height:500px;
+overflow:auto;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Research Paper Analyzer</h1>
+
+<p>Upload research paper and automatic analysis</p>
+
+<input type="file" id="pdfFile">
+
+<br><br>
+
+<button onclick="analyze()">Analyze Paper</button>
+
+<p id="status"></p>
+
+<div id="result" class="result"></div>
+
+</div>
+
+<footer style="margin-top:40px;color:#cfd8dc;">
+Developed by Uttam Woli Sharma – Researcher
+</footer>
+
+<script>
+
+let paperText="";
+
+async function analyze(){
+
+let fileInput=document.getElementById("pdfFile");
+
+if(fileInput.files.length===0){
+document.getElementById("status").innerText="Select a PDF first";
+return;
+}
+
+let file=fileInput.files[0];
+
+document.getElementById("status").innerText="Reading paper...";
+
+let reader=new FileReader();
+
+reader.onload=async function(){
+
+let typedarray=new Uint8Array(this.result);
+
+let pdf=await pdfjsLib.getDocument(typedarray).promise;
+
+paperText="";
+
+for(let i=1;i<=pdf.numPages;i++){
+
+let page=await pdf.getPage(i);
+
+let content=await page.getTextContent();
+
+let strings=content.items.map(item=>item.str);
+
+paperText+=strings.join(" ")+" ";
+
+}
+
+document.getElementById("status").innerText="Paper loaded successfully";
+
+generateAnalysis();
+
+}
+
+reader.readAsArrayBuffer(file);
+
+}
+
+function generateAnalysis(){
+
+let sentences=paperText.split(". ");
+
+let summary=sentences.slice(0,5).join(". ");
+
+let findings=sentences.filter(s=>
+
+s.toLowerCase().includes("result") ||
+s.toLowerCase().includes("significant") ||
+s.toLowerCase().includes("increase") ||
+s.toLowerCase().includes("improve") ||
+s.toLowerCase().includes("show")
+
+).slice(0,5).join(". ");
+
+let keywords=topKeywords(paperText);
+
+let output="";
+
+output+="SUMMARY\n\n"+summary+"\n\n";
+
+output+="KEY FINDINGS\n\n"+findings+"\n\n";
+
+output+="TOP KEYWORDS\n\n"+keywords;
+
+document.getElementById("result").innerText=output;
+
+}
+
+function topKeywords(text){
+
+let words=text.toLowerCase().replace(/[^a-z\s]/g,"").split(/\s+/);
+
+let freq={};
+
+words.forEach(word=>{
+
+if(word.length>6){
+
+freq[word]=(freq[word]||0)+1;
+
+}
+
+});
+
+let sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+
+return sorted.slice(0,10).map(x=>x[0]).join(", ");
+
+}
+
+</script>
+
+</body>
+</html>
