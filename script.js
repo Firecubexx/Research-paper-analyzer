@@ -12,6 +12,8 @@ const DEMO_PAPERS = [
   }
 ];
 
+const PROXY_URL = 'https://rja-proxy.onrender.com/proxy';
+
 let userPapers = [];
 let currentTool = 'summary';
 let selectedPaperIds = ['demo1'];
@@ -25,16 +27,14 @@ window.addEventListener('DOMContentLoaded', () => {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  const savedKey = localStorage.getItem('anthropic_api_key');
-  if (savedKey) {
-    document.getElementById('apiKeyInput').value = savedKey;
-    updateApiStatus();
-  }
-
   renderPapersList();
   renderPaperSelectList();
   renderLibrary();
   updateCounts();
+
+  // Show API ready since key is in proxy
+  document.getElementById('apiStatus').innerHTML =
+    '<span class="dot dot-green"></span><span class="hide-mobile">API Ready</span>';
 });
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
@@ -45,47 +45,6 @@ function showPage(pageId) {
   document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
   if (pageId === 'library') renderLibrary();
   if (pageId === 'analyze') renderPaperSelectList();
-}
-
-// ─── API Key ──────────────────────────────────────────────────────────────────
-function saveApiKey() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key) return;
-  localStorage.setItem('anthropic_api_key', key);
-  const msg = document.getElementById('apiSaveMsg');
-  msg.style.display = 'block';
-  msg.style.color = 'var(--accent4)';
-  msg.textContent = '✓ API key saved to browser';
-  updateApiStatus();
-  setTimeout(() => msg.style.display = 'none', 3000);
-}
-
-function updateApiStatus() {
-  const key = document.getElementById('apiKeyInput').value.trim()
-    || localStorage.getItem('anthropic_api_key') || '';
-  const status = document.getElementById('apiStatus');
-  if (key && key.startsWith('sk-ant')) {
-    status.innerHTML = '<span class="dot dot-green"></span><span class="hide-mobile">API Ready</span>';
-  } else {
-    status.innerHTML = '<span class="dot dot-red"></span><span class="hide-mobile">No API Key</span>';
-  }
-}
-
-async function testApiKey() {
-  const key = localStorage.getItem('anthropic_api_key');
-  const resultEl = document.getElementById('testResult');
-  resultEl.style.display = 'block';
-  resultEl.style.color = 'var(--text2)';
-  resultEl.textContent = 'Testing…';
-  if (!key) { resultEl.style.color='var(--danger)'; resultEl.textContent='No API key saved.'; return; }
-  try {
-    const r = await callClaude('Say "API connection successful" and nothing else.', 'You are a helpful assistant.', key);
-    resultEl.style.color = 'var(--accent4)';
-    resultEl.textContent = '✓ ' + r.substring(0, 60);
-  } catch (e) {
-    resultEl.style.color = 'var(--danger)';
-    resultEl.textContent = '✗ ' + e.message;
-  }
 }
 
 // ─── PDF Upload ───────────────────────────────────────────────────────────────
@@ -161,9 +120,7 @@ function renderPapersList() {
   const list = document.getElementById('papersList');
   const papers = allPapers();
 
-  // show stats
-  const statsRow = document.getElementById('statsRow');
-  statsRow.style.display = 'grid';
+  document.getElementById('statsRow').style.display = 'grid';
   document.getElementById('statTotal').textContent = papers.length;
   document.getElementById('statReady').textContent = papers.filter(p => p.analyzed).length;
 
@@ -193,8 +150,7 @@ function removePaper(id) {
 }
 
 function updateCounts() {
-  const n = userPapers.length;
-  document.getElementById('uploadCount').textContent = n + ' uploaded';
+  document.getElementById('uploadCount').textContent = userPapers.length + ' uploaded';
   document.getElementById('statTotal').textContent = allPapers().length;
   document.getElementById('statReady').textContent = allPapers().filter(p=>p.analyzed).length;
   document.getElementById('libTotal').textContent = allPapers().length;
@@ -208,7 +164,6 @@ function selectTool(tool) {
   document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
   document.querySelector(`[data-tool="${tool}"]`).classList.add('active');
 
-  // Show/hide extra inputs
   const textCard = document.getElementById('textInputCard');
   const refCard = document.getElementById('refStyleCard');
   const textLabel = document.getElementById('textInputLabel');
@@ -225,10 +180,8 @@ function selectTool(tool) {
     textInput.placeholder = 'Paste AI-generated text here…';
   }
 
-  // Update run button
   const labels = { summary:'Deep Summary', detector:'AI Detector', humanizer:'Humanizer', multisummary:'Multi-Paper Synthesis', references:'References' };
   document.getElementById('runBtn').innerHTML = `🚀 Run ${labels[tool]}`;
-
   resetResults();
 }
 
@@ -260,15 +213,8 @@ function togglePaperSelect(id) {
 
 // ─── Run Analysis ─────────────────────────────────────────────────────────────
 async function runAnalysis() {
-  const key = localStorage.getItem('anthropic_api_key');
-  if (!key) {
-    showAnalyzeError('⚙️ No API key — go to Settings and add your Anthropic key first.');
-    return;
-  }
-
   const sel = allPapers().filter(p => selectedPaperIds.includes(p.id));
 
-  // Validation
   if (!sel.length && currentTool !== 'humanizer') { showAnalyzeError('Select at least one paper.'); return; }
   if (currentTool === 'multisummary' && sel.length < 2) { showAnalyzeError('Select at least 2 papers for Multi-Paper Synthesis.'); return; }
   if (currentTool === 'humanizer' && !document.getElementById('textInput').value.trim()) {
@@ -285,7 +231,7 @@ async function runAnalysis() {
 
   try {
     const prompt = buildPrompt(currentTool, paperContents, paperNames, textInput, refStyle);
-    const result = await callClaude(prompt, '', key);
+    const result = await callClaude(prompt);
     currentResult = result;
     showResult(result);
   } catch (e) {
@@ -319,23 +265,16 @@ function buildPrompt(tool, contents, names, textInput, refStyle) {
   }
 }
 
-// ─── Anthropic API call ───────────────────────────────────────────────────────
-async function callClaude(prompt, system, apiKey) {
-  const body = {
-    model: 'claude-opus-4-5',
-    max_tokens: 2000,
-    messages: [{ role: 'user', content: prompt }]
-  };
-  if (system) body.system = system;
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+// ─── API call via proxy ───────────────────────────────────────────────────────
+async function callClaude(prompt) {
+  const response = await fetch(PROXY_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify(body)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
   });
 
   const data = await response.json();
@@ -349,7 +288,6 @@ function showResult(text) {
   document.getElementById('resultEmpty').style.display = 'none';
   document.getElementById('resultState').style.display = 'block';
 
-  // AI score card
   const scoreCard = document.getElementById('scoreCard');
   if (currentTool === 'detector') {
     const match = text.match(/(\d{1,3})\s*%/);
@@ -372,10 +310,8 @@ function showResult(text) {
     scoreCard.style.display = 'none';
   }
 
-  // Main result
   document.getElementById('resultBox').innerHTML = `<pre>${escHtml(text)}</pre>`;
 
-  // References list
   const refsCard = document.getElementById('refsCard');
   if (currentTool === 'references') {
     const lines = text.split('\n').filter(l => /^\d+[\.\)]/.test(l.trim()));
