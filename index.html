@@ -1,161 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uttam Research Intelligence Hub</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-
-    <style>
-        :root {
-            --primary: #00d2ff;
-            --secondary: #3a7bd5;
-            --bg: #0f2027;
-            --glass: rgba(255, 255, 255, 0.1);
-        }
-
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: white;
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            max-width: 1000px;
-            width: 100%;
-            background: var(--glass);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            padding: 40px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            text-align: center;
-        }
-
-        h1 { font-weight: 300; letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase; }
-        .subtitle { color: #b0bec5; margin-bottom: 30px; font-style: italic; }
-
-        .upload-section {
-            border: 2px dashed var(--primary);
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            background: rgba(255, 255, 255, 0.03);
-            transition: 0.3s;
-        }
-
-        .upload-section:hover { background: rgba(0, 210, 255, 0.08); }
-
-        .btn-group { 
-            display: flex; 
-            gap: 15px; 
-            justify-content: center; 
-            flex-wrap: wrap; 
-            margin-bottom: 20px;
-        }
-
-        button {
-            padding: 12px 28px;
-            border: none;
-            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
-            color: white;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 210, 255, 0.4);
-            filter: brightness(1.1);
-        }
-
-        #status { 
-            margin: 15px 0; 
-            color: var(--primary); 
-            font-weight: 600; 
-            font-size: 0.9rem;
-        }
-
-        /* Results Area Graphics */
-        .result-card {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 30px;
-            border-radius: 15px;
-            margin-top: 25px;
-            text-align: left;
-            border-left: 5px solid var(--primary);
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .section-title {
-            color: var(--primary);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 8px;
-            margin-top: 25px;
-            font-size: 1.2rem;
-        }
-
-        footer { margin-top: 50px; opacity: 0.5; font-size: 0.8rem; letter-spacing: 1px; }
-
-        /* Custom Scrollbar for the glass effect */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
-        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
-
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research Journal Analyzer</title>
+  <meta name="description" content="AI-powered research paper analysis — deep summaries, AI detection, humanizer, reference management" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="container">
-    <h1>RE-SEARCH AI</h1>
-    <p class="subtitle">Advanced Research Gap & Synthesis Engine</p>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand" onclick="showPage('upload')">
+      ResearchJournal<span>Analyzer</span>
+    </div>
+    <nav class="nav" id="mainNav">
+      <button class="nav-btn active" data-page="upload" onclick="showPage('upload')">
+        <span>⬆️</span> Papers
+      </button>
+      <button class="nav-btn" data-page="analyze" onclick="showPage('analyze')">
+        <span>🔬</span> Analyze
+      </button>
+      <button class="nav-btn" data-page="library" onclick="showPage('library')">
+        <span>📚</span> Library
+      </button>
+      <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
+        <span>⚙️</span> <span class="hide-mobile">Settings</span>
+      </button>
+    </nav>
+    <div class="topbar-right">
+      <div class="api-status" id="apiStatus">
+        <span class="dot dot-red"></span>
+        <span class="hide-mobile">No API Key</span>
+      </div>
+      <div class="upload-count" id="uploadCount">0 papers</div>
+    </div>
+  </header>
 
-    <div class="upload-section">
-        <input type="file" id="pdfFiles" multiple accept=".pdf">
-        <p style="font-size: 0.85rem; margin-top: 10px; color: #90a4ae;">
-            Drag & drop or select multiple PDF research papers
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ═══════════════════════════════ UPLOAD PAGE ═══════════════════════════ -->
+    <section id="page-upload" class="page active">
+      <div class="page-title">Research Papers</div>
+      <div class="page-sub">Upload your PDFs — text is extracted automatically in your browser</div>
+
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+        ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <input type="file" id="fileInput" accept=".pdf" multiple style="display:none" onchange="handleFileSelect(event)">
+        <div class="upload-icon">📄</div>
+        <div class="upload-title" id="uploadTitle">Drop PDFs here or click to browse</div>
+        <div class="upload-sub">Multiple files supported · Text extracted via PDF.js · No data leaves your browser</div>
+        <div class="extract-progress" id="extractProgress" style="display:none">
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+      </div>
+
+      <div class="stats-row" id="statsRow" style="display:none">
+        <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-num" id="statReady">0</div><div class="stat-label">Ready</div></div>
+        <div class="stat-card"><div class="stat-num" id="statDemo">2</div><div class="stat-label">Demo</div></div>
+      </div>
+
+      <div class="section-label" style="margin-top:28px">All Papers</div>
+      <div class="papers-list" id="papersList"></div>
+    </section>
+
+    <!-- ═══════════════════════════════ ANALYZE PAGE ══════════════════════════ -->
+    <section id="page-analyze" class="page">
+      <div class="page-title">AI Analysis Tools</div>
+      <div class="page-sub">Select a tool and papers — powered by Claude AI</div>
+
+      <div class="tool-grid" id="toolGrid">
+        <div class="tool-card active" data-tool="summary" onclick="selectTool('summary')">
+          <div class="tool-icon">📋</div>
+          <div class="tool-name">Deep Summary</div>
+          <div class="tool-desc">Key findings, methods, contributions</div>
+        </div>
+        <div class="tool-card" data-tool="detector" onclick="selectTool('detector')">
+          <div class="tool-icon">🔍</div>
+          <div class="tool-name">AI Detector</div>
+          <div class="tool-desc">Score AI-generated content 0–100%</div>
+        </div>
+        <div class="tool-card" data-tool="humanizer" onclick="selectTool('humanizer')">
+          <div class="tool-icon">✍️</div>
+          <div class="tool-name">Humanizer</div>
+          <div class="tool-desc">Rewrite AI text naturally</div>
+        </div>
+        <div class="tool-card" data-tool="multisummary" onclick="selectTool('multisummary')">
+          <div class="tool-icon">📚</div>
+          <div class="tool-name">Multi-Paper</div>
+          <div class="tool-desc">Cross-paper synthesis</div>
+        </div>
+        <div class="tool-card" data-tool="references" onclick="selectTool('references')">
+          <div class="tool-icon">🗂️</div>
+          <div class="tool-name">References</div>
+          <div class="tool-desc">Extract & format citations</div>
+        </div>
+      </div>
+
+      <div class="analyze-grid">
+        <!-- Left: controls -->
+        <div>
+          <div class="card">
+            <div class="section-label">Select Papers</div>
+            <div class="paper-select-list" id="paperSelectList">
+              <p style="color:var(--text3);font-size:13px;padding:8px 0">Upload papers on the Papers tab first</p>
+            </div>
+          </div>
+
+          <div class="card" id="textInputCard" style="margin-top:14px;display:none">
+            <div class="section-label" id="textInputLabel">Paste text to check</div>
+            <textarea id="textInput" rows="6" placeholder="Paste text here..."></textarea>
+          </div>
+
+          <div class="card" id="refStyleCard" style="margin-top:14px;display:none">
+            <div class="section-label">Citation Style</div>
+            <select id="refStyle" style="width:100%;margin-top:8px">
+              <option>APA</option><option>MLA</option><option>Chicago</option>
+              <option>Harvard</option><option>Vancouver</option><option>IEEE</option>
+            </select>
+          </div>
+
+          <div class="error-box" id="analyzeError" style="display:none"></div>
+
+          <button class="btn btn-primary btn-full" id="runBtn" onclick="runAnalysis()" style="margin-top:14px">
+            🚀 Run Analysis
+          </button>
+        </div>
+
+        <!-- Right: results -->
+        <div>
+          <div class="empty-state" id="resultEmpty">
+            <div class="empty-icon">📊</div>
+            <div>Results will appear here</div>
+          </div>
+
+          <div id="loadingState" style="display:none">
+            <div class="card">
+              <div style="font-size:14px;color:var(--text2);margin-bottom:8px">Claude is analyzing your paper…</div>
+              <div class="progress-track"><div class="progress-fill anim"></div></div>
+            </div>
+          </div>
+
+          <div id="resultState" style="display:none">
+            <!-- AI Score (detector only) -->
+            <div class="card" id="scoreCard" style="display:none;margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div class="section-label">AI Content Score</div>
+                <div class="score-num" id="scoreNum">0%</div>
+              </div>
+              <div class="progress-track" style="margin:10px 0 6px">
+                <div class="progress-fill score-bar" id="scoreBar" style="width:0%"></div>
+              </div>
+              <div class="score-label" id="scoreLabel"></div>
+            </div>
+
+            <!-- Main result -->
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div class="section-label">Result</div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-ghost btn-sm" onclick="copyResult()">📋 Copy</button>
+                  <button class="btn btn-ghost btn-sm" onclick="downloadResult()">⬇️ Download</button>
+                </div>
+              </div>
+              <div class="result-box" id="resultBox"></div>
+            </div>
+
+            <!-- References list -->
+            <div class="card" id="refsCard" style="display:none;margin-top:14px">
+              <div class="section-label" id="refsLabel">References</div>
+              <div class="refs-list" id="refsList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════ LIBRARY PAGE ══════════════════════════ -->
+    <section id="page-library" class="page">
+      <div class="page-title">Paper Library</div>
+      <div class="page-sub">All your papers in one place</div>
+
+      <div class="stats-row" style="display:grid">
+        <div class="stat-card"><div class="stat-num" id="libTotal">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-num" id="libReady">0</div><div class="stat-label">Text Ready</div></div>
+        <div class="stat-card"><div class="stat-num" id="libUploaded">0</div><div class="stat-label">Uploaded</div></div>
+        <div class="stat-card"><div class="stat-num">2</div><div class="stat-label">Demo</div></div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin:20px 0;align-items:center">
+        <input id="librarySearch" type="text" placeholder="Search papers…" style="flex:1;padding:9px 14px" oninput="renderLibrary()">
+        <button class="btn btn-ghost btn-sm" onclick="setLibView('grid')" id="btnGrid">⊞ Grid</button>
+        <button class="btn btn-ghost btn-sm" onclick="setLibView('list')" id="btnList">☰ List</button>
+      </div>
+
+      <div id="libraryGrid" class="library-grid"></div>
+    </section>
+
+    <!-- ═══════════════════════════════ SETTINGS PAGE ═════════════════════════ -->
+    <section id="page-settings" class="page">
+      <div class="page-title">Settings</div>
+      <div class="page-sub">Configure your Anthropic API key to enable AI features</div>
+
+      <div class="card" style="max-width:560px">
+        <div class="section-label">Anthropic API Key</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+          Your key is stored only in your browser (localStorage) and sent directly to Anthropic — never to any server.
+          Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.
+          New accounts get <strong>$5 free credit</strong> — enough for hundreds of analyses.
         </p>
-    </div>
+        <div style="display:flex;gap:10px">
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." style="flex:1;padding:10px 14px" oninput="updateApiStatus()">
+          <button class="btn btn-primary" onclick="saveApiKey()">Save</button>
+        </div>
+        <div id="apiSaveMsg" style="font-size:13px;margin-top:10px;display:none"></div>
 
-    <div class="btn-group">
-        <button onclick="processFiles('single')">Deep Analyze (1st Paper)</button>
-        <button onclick="processFiles('compare')">Compare Papers</button>
-        <button onclick="processFiles('gap')">Identify Research Gaps</button>
-    </div>
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+          <div class="section-label">Test Connection</div>
+          <button class="btn btn-ghost" onclick="testApiKey()" style="margin-top:8px">🔌 Test API Key</button>
+          <div id="testResult" style="font-size:13px;margin-top:10px;display:none"></div>
+        </div>
+      </div>
 
-    <p id="status">System Standby</p>
+      <div class="card" style="max-width:560px;margin-top:16px">
+        <div class="section-label">About</div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.7">
+          <strong style="color:var(--text)">ResearchJournalAnalyzer.me</strong> — AI-powered academic research tools.<br>
+          Built with React, PDF.js, and Claude AI (claude-opus-4-5).<br>
+          Your PDFs are processed entirely in your browser. No data is stored on any server.
+        </p>
+      </div>
+    </section>
 
-    <div id="displayArea"></div>
+  </main>
 
-    <footer>DEVELOPED BY UTTAM WOLI SHARMA</footer>
-</div>
+  <footer class="footer">
+    <span>ResearchJournalAnalyzer.me</span>
+    <span>AI-Powered Academic Tools · Powered by Claude</span>
+  </footer>
 
-<script src="script.js"></script>
-
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
