@@ -12,7 +12,7 @@ const DEMO_PAPERS = [
   }
 ];
 
-const PROXY_URL = 'https://rja-proxy.onrender.com/proxy';
+const PROXY_URL = 'https://rja-proxy-production.up.railway.app/proxy';
 
 let userPapers = [];
 let currentTool = 'summary';
