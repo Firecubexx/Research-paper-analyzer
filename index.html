@@ -1,249 +1,417 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Research Journal Analyzer</title>
-  <meta name="description" content="AI-powered research paper analysis — deep summaries, AI detection, humanizer, reference management" />
+  <meta name="description" content="AI-powered research paper analysis, AI detection, and humanizer tools"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <div class="brand" onclick="showPage('upload')">
-      ResearchJournal<span>Analyzer</span>
+    <div class="brand" onclick="showPage('home')">
+      <span class="brand-icon">◈</span>
+      <span class="brand-text">Research<em>Analyzer</em></span>
     </div>
-    <nav class="nav" id="mainNav">
-      <button class="nav-btn active" data-page="upload" onclick="showPage('upload')">
-        <span>⬆️</span> Papers
-      </button>
-      <button class="nav-btn" data-page="analyze" onclick="showPage('analyze')">
-        <span>🔬</span> Analyze
-      </button>
-      <button class="nav-btn" data-page="library" onclick="showPage('library')">
-        <span>📚</span> Library
-      </button>
-      <button class="nav-btn" data-page="settings" onclick="showPage('settings')">
-        <span>⚙️</span> <span class="hide-mobile">Settings</span>
-      </button>
+    <nav class="nav">
+      <button class="nav-btn" data-page="home" onclick="showPage('home')">Home</button>
+      <button class="nav-btn" data-page="analyze" onclick="showPage('analyze')">Paper Analysis</button>
+      <button class="nav-btn" data-page="detector" onclick="showPage('detector')">AI Detector</button>
+      <button class="nav-btn" data-page="humanizer" onclick="showPage('humanizer')">Humanizer</button>
+      <button class="nav-btn" data-page="references" onclick="showPage('references')">References</button>
+      <button class="nav-btn" data-page="multi" onclick="showPage('multi')">Multi-Paper</button>
     </nav>
-    <div class="topbar-right">
-      <div class="api-status" id="apiStatus">
-        <span class="dot dot-red"></span>
-        <span class="hide-mobile">No API Key</span>
-      </div>
-      <div class="upload-count" id="uploadCount">0 papers</div>
-    </div>
+    <div class="nav-toggle" onclick="toggleMobileNav()">☰</div>
   </header>
 
-  <!-- MAIN -->
+  <!-- MOBILE NAV -->
+  <div class="mobile-nav" id="mobileNav">
+    <button onclick="showPage('home');toggleMobileNav()">Home</button>
+    <button onclick="showPage('analyze');toggleMobileNav()">Paper Analysis</button>
+    <button onclick="showPage('detector');toggleMobileNav()">AI Detector</button>
+    <button onclick="showPage('humanizer');toggleMobileNav()">Humanizer</button>
+    <button onclick="showPage('references');toggleMobileNav()">References</button>
+    <button onclick="showPage('multi');toggleMobileNav()">Multi-Paper</button>
+  </div>
+
   <main class="main">
 
-    <!-- ═══════════════════════════════ UPLOAD PAGE ═══════════════════════════ -->
-    <section id="page-upload" class="page active">
-      <div class="page-title">Research Papers</div>
-      <div class="page-sub">Upload your PDFs — text is extracted automatically in your browser</div>
-
-      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
-        ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
-        <input type="file" id="fileInput" accept=".pdf" multiple style="display:none" onchange="handleFileSelect(event)">
-        <div class="upload-icon">📄</div>
-        <div class="upload-title" id="uploadTitle">Drop PDFs here or click to browse</div>
-        <div class="upload-sub">Multiple files supported · Text extracted via PDF.js · No data leaves your browser</div>
-        <div class="extract-progress" id="extractProgress" style="display:none">
-          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <!-- ══════════════════════════════ HOME ══════════════════════════════════ -->
+    <section id="page-home" class="page active">
+      <div class="hero">
+        <div class="hero-badge">AI-Powered Research Tools</div>
+        <h1 class="hero-title">Analyze Research<br><em>Like Never Before</em></h1>
+        <p class="hero-sub">Upload your papers and let AI extract deep insights, detect AI-generated content, humanize text, and manage your references — all in one place.</p>
+        <div class="hero-btns">
+          <button class="btn btn-primary btn-lg" onclick="showPage('analyze')">Start Analyzing →</button>
+          <button class="btn btn-outline btn-lg" onclick="showPage('detector')">Detect AI Content</button>
         </div>
       </div>
 
-      <div class="stats-row" id="statsRow" style="display:none">
-        <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Total</div></div>
-        <div class="stat-card"><div class="stat-num" id="statReady">0</div><div class="stat-label">Ready</div></div>
-        <div class="stat-card"><div class="stat-num" id="statDemo">2</div><div class="stat-label">Demo</div></div>
+      <div class="features-grid">
+        <div class="feature-card" onclick="showPage('analyze')">
+          <div class="feature-icon">📋</div>
+          <div class="feature-name">Paper Analysis</div>
+          <div class="feature-desc">Deep dive into methodology, findings, contributions and limitations with structured AI analysis</div>
+          <div class="feature-arrow">→</div>
+        </div>
+        <div class="feature-card" onclick="showPage('detector')">
+          <div class="feature-icon">🔍</div>
+          <div class="feature-name">AI Detector</div>
+          <div class="feature-desc">Advanced multi-signal detection of AI-generated content with sentence-level breakdown</div>
+          <div class="feature-arrow">→</div>
+        </div>
+        <div class="feature-card" onclick="showPage('humanizer')">
+          <div class="feature-icon">✍️</div>
+          <div class="feature-name">Humanizer</div>
+          <div class="feature-desc">Transform AI-written text into natural academic prose that passes detection tools</div>
+          <div class="feature-arrow">→</div>
+        </div>
+        <div class="feature-card" onclick="showPage('references')">
+          <div class="feature-icon">🗂️</div>
+          <div class="feature-name">References</div>
+          <div class="feature-desc">Extract and format citations in APA, MLA, Chicago, Harvard, Vancouver or IEEE</div>
+          <div class="feature-arrow">→</div>
+        </div>
+        <div class="feature-card" onclick="showPage('multi')">
+          <div class="feature-icon">📚</div>
+          <div class="feature-name">Multi-Paper</div>
+          <div class="feature-desc">Synthesize multiple papers for literature reviews with cross-paper analysis</div>
+          <div class="feature-arrow">→</div>
+        </div>
       </div>
 
-      <div class="section-label" style="margin-top:28px">All Papers</div>
-      <div class="papers-list" id="papersList"></div>
+      <div class="footer-credit">© Developed by Uttam Woli Sharma</div>
     </section>
 
-    <!-- ═══════════════════════════════ ANALYZE PAGE ══════════════════════════ -->
+    <!-- ══════════════════════════════ PAPER ANALYSIS ═════════════════════════ -->
     <section id="page-analyze" class="page">
-      <div class="page-title">AI Analysis Tools</div>
-      <div class="page-sub">Select a tool and papers — AI-powered research tools</div>
-
-      <div class="tool-grid" id="toolGrid">
-        <div class="tool-card active" data-tool="summary" onclick="selectTool('summary')">
-          <div class="tool-icon">📋</div>
-          <div class="tool-name">Deep Summary</div>
-          <div class="tool-desc">Key findings, methods, contributions</div>
-        </div>
-        <div class="tool-card" data-tool="detector" onclick="selectTool('detector')">
-          <div class="tool-icon">🔍</div>
-          <div class="tool-name">AI Detector</div>
-          <div class="tool-desc">Score AI-generated content 0–100%</div>
-        </div>
-        <div class="tool-card" data-tool="humanizer" onclick="selectTool('humanizer')">
-          <div class="tool-icon">✍️</div>
-          <div class="tool-name">Humanizer</div>
-          <div class="tool-desc">Rewrite AI text naturally</div>
-        </div>
-        <div class="tool-card" data-tool="multisummary" onclick="selectTool('multisummary')">
-          <div class="tool-icon">📚</div>
-          <div class="tool-name">Multi-Paper</div>
-          <div class="tool-desc">Cross-paper synthesis</div>
-        </div>
-        <div class="tool-card" data-tool="references" onclick="selectTool('references')">
-          <div class="tool-icon">🗂️</div>
-          <div class="tool-name">References</div>
-          <div class="tool-desc">Extract & format citations</div>
-        </div>
+      <div class="page-header">
+        <div class="page-tag">Tool 01</div>
+        <h2 class="page-title">Paper Analysis</h2>
+        <p class="page-sub">Upload a research paper and get a comprehensive AI-powered deep analysis</p>
       </div>
 
-      <div class="analyze-grid">
-        <!-- Left: controls -->
-        <div>
-          <div class="card">
-            <div class="section-label">Select Papers</div>
-            <div class="paper-select-list" id="paperSelectList">
-              <p style="color:var(--text3);font-size:13px;padding:8px 0">Upload papers on the Papers tab first</p>
+      <div class="tool-layout">
+        <div class="tool-input">
+          <div class="upload-zone" id="analyzeUpload" onclick="document.getElementById('analyzeFile').click()"
+            ondragover="handleDragOver(event,'analyzeUpload')" ondragleave="handleDragLeave('analyzeUpload')" ondrop="handleDrop(event,'analyzeFile','analyzeUpload')">
+            <input type="file" id="analyzeFile" accept=".pdf" style="display:none" onchange="handleFileForTool(event,'analyzeContent','analyzeMeta')">
+            <div class="upload-icon">📄</div>
+            <div class="upload-hint">Drop PDF or click to upload</div>
+          </div>
+          <div class="file-meta" id="analyzeMeta" style="display:none"></div>
+
+          <div class="or-divider">or paste text directly</div>
+          <textarea id="analyzeContent" rows="8" placeholder="Paste your paper content here…"></textarea>
+
+          <div class="analysis-options">
+            <div class="option-label">Analysis Depth</div>
+            <div class="option-chips">
+              <span class="chip active" onclick="selectChip(this,'analyzeDepth','standard')">Standard</span>
+              <span class="chip" onclick="selectChip(this,'analyzeDepth','deep')">Deep</span>
+              <span class="chip" onclick="selectChip(this,'analyzeDepth','critical')">Critical Review</span>
             </div>
+            <input type="hidden" id="analyzeDepth" value="standard">
           </div>
 
-          <div class="card" id="textInputCard" style="margin-top:14px;display:none">
-            <div class="section-label" id="textInputLabel">Paste text to check</div>
-            <textarea id="textInput" rows="6" placeholder="Paste text here..."></textarea>
-          </div>
-
-          <div class="card" id="refStyleCard" style="margin-top:14px;display:none">
-            <div class="section-label">Citation Style</div>
-            <select id="refStyle" style="width:100%;margin-top:8px">
-              <option>APA</option><option>MLA</option><option>Chicago</option>
-              <option>Harvard</option><option>Vancouver</option><option>IEEE</option>
-            </select>
-          </div>
-
-          <div class="error-box" id="analyzeError" style="display:none"></div>
-
-          <button class="btn btn-primary btn-full" id="runBtn" onclick="runAnalysis()" style="margin-top:14px">
-            🚀 Run Analysis
+          <button class="btn btn-primary btn-full" onclick="runAnalysis()" id="analyzeBtn">
+            📋 Analyze Paper
           </button>
         </div>
 
-        <!-- Right: results -->
-        <div>
-          <div class="empty-state" id="resultEmpty">
-            <div class="empty-icon">📊</div>
-            <div>Results will appear here</div>
+        <div class="tool-output">
+          <div class="output-empty" id="analyzeEmpty">
+            <div class="empty-icon">📋</div>
+            <div>Your analysis will appear here</div>
           </div>
-
-          <div id="loadingState" style="display:none">
-            <div class="card">
-              <div style="font-size:14px;color:var(--text2);margin-bottom:8px">Analyzing your paper…</div>
-              <div class="progress-track"><div class="progress-fill anim"></div></div>
+          <div id="analyzeLoading" style="display:none" class="loading-state">
+            <div class="loading-text">Analyzing paper…</div>
+            <div class="loading-bar"><div class="loading-fill"></div></div>
+          </div>
+          <div id="analyzeResult" style="display:none">
+            <div class="result-header">
+              <span class="result-title">Analysis Complete</span>
+              <div class="result-actions">
+                <button class="btn btn-sm btn-ghost" onclick="copyOutput('analyzeOutput')">Copy</button>
+                <button class="btn btn-sm btn-ghost" onclick="downloadOutput('analyzeOutput','analysis')">Download</button>
+              </div>
             </div>
+            <div class="result-content" id="analyzeOutput"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ AI DETECTOR ════════════════════════════ -->
+    <section id="page-detector" class="page">
+      <div class="page-header">
+        <div class="page-tag">Tool 02</div>
+        <h2 class="page-title">AI Content Detector</h2>
+        <p class="page-sub">Advanced detection using linguistic patterns, perplexity analysis, and structural signals</p>
+      </div>
+
+      <div class="tool-layout">
+        <div class="tool-input">
+          <div class="upload-zone" id="detectorUpload" onclick="document.getElementById('detectorFile').click()"
+            ondragover="handleDragOver(event,'detectorUpload')" ondragleave="handleDragLeave('detectorUpload')" ondrop="handleDrop(event,'detectorFile','detectorUpload')">
+            <input type="file" id="detectorFile" accept=".pdf" style="display:none" onchange="handleFileForTool(event,'detectorContent','detectorMeta')">
+            <div class="upload-icon">🔍</div>
+            <div class="upload-hint">Drop PDF or click to upload</div>
+          </div>
+          <div class="file-meta" id="detectorMeta" style="display:none"></div>
+
+          <div class="or-divider">or paste text directly</div>
+          <textarea id="detectorContent" rows="10" placeholder="Paste text to analyze for AI content…&#10;&#10;Works best with paragraphs of 100+ words."></textarea>
+
+          <div class="analysis-options">
+            <div class="option-label">Detection Mode</div>
+            <div class="option-chips">
+              <span class="chip active" onclick="selectChip(this,'detectorMode','standard')">Standard</span>
+              <span class="chip" onclick="selectChip(this,'detectorMode','academic')">Academic</span>
+              <span class="chip" onclick="selectChip(this,'detectorMode','strict')">Strict</span>
+            </div>
+            <input type="hidden" id="detectorMode" value="standard">
           </div>
 
-          <div id="resultState" style="display:none">
-            <!-- AI Score (detector only) -->
-            <div class="card" id="scoreCard" style="display:none;margin-bottom:14px">
-              <div style="display:flex;justify-content:space-between;align-items:baseline">
-                <div class="section-label">AI Content Score</div>
+          <button class="btn btn-primary btn-full" onclick="runDetector()" id="detectorBtn">
+            🔍 Detect AI Content
+          </button>
+        </div>
+
+        <div class="tool-output">
+          <div class="output-empty" id="detectorEmpty">
+            <div class="empty-icon">🔍</div>
+            <div>Detection results will appear here</div>
+          </div>
+          <div id="detectorLoading" style="display:none" class="loading-state">
+            <div class="loading-text">Analyzing for AI patterns…</div>
+            <div class="loading-bar"><div class="loading-fill"></div></div>
+          </div>
+          <div id="detectorResult" style="display:none">
+            <div class="score-card" id="scoreCard">
+              <div class="score-left">
+                <div class="score-label">AI Probability</div>
                 <div class="score-num" id="scoreNum">0%</div>
+                <div class="score-verdict" id="scoreVerdict"></div>
               </div>
-              <div class="progress-track" style="margin:10px 0 6px">
-                <div class="progress-fill score-bar" id="scoreBar" style="width:0%"></div>
-              </div>
-              <div class="score-label" id="scoreLabel"></div>
-            </div>
-
-            <!-- Main result -->
-            <div class="card">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                <div class="section-label">Result</div>
-                <div style="display:flex;gap:8px">
-                  <button class="btn btn-ghost btn-sm" onclick="copyResult()">📋 Copy</button>
-                  <button class="btn btn-ghost btn-sm" onclick="downloadResult()">⬇️ Download</button>
+              <div class="score-right">
+                <div class="score-ring-wrap">
+                  <svg viewBox="0 0 100 100" class="score-ring">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border2)" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="40" fill="none" stroke-width="8" stroke-linecap="round"
+                      id="scoreCircle" style="stroke-dasharray:251;stroke-dashoffset:251;transform:rotate(-90deg);transform-origin:50% 50%"/>
+                  </svg>
                 </div>
               </div>
-              <div class="result-box" id="resultBox"></div>
             </div>
-
-            <!-- References list -->
-            <div class="card" id="refsCard" style="display:none;margin-top:14px">
-              <div class="section-label" id="refsLabel">References</div>
-              <div class="refs-list" id="refsList"></div>
+            <div class="result-header" style="margin-top:16px">
+              <span class="result-title">Detailed Report</span>
+              <div class="result-actions">
+                <button class="btn btn-sm btn-ghost" onclick="copyOutput('detectorOutput')">Copy</button>
+                <button class="btn btn-sm btn-ghost" onclick="downloadOutput('detectorOutput','ai-detection')">Download</button>
+              </div>
             </div>
+            <div class="result-content" id="detectorOutput"></div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════════════════════════ LIBRARY PAGE ══════════════════════════ -->
-    <section id="page-library" class="page">
-      <div class="page-title">Paper Library</div>
-      <div class="page-sub">All your papers in one place</div>
-
-      <div class="stats-row" style="display:grid">
-        <div class="stat-card"><div class="stat-num" id="libTotal">0</div><div class="stat-label">Total</div></div>
-        <div class="stat-card"><div class="stat-num" id="libReady">0</div><div class="stat-label">Text Ready</div></div>
-        <div class="stat-card"><div class="stat-num" id="libUploaded">0</div><div class="stat-label">Uploaded</div></div>
-        <div class="stat-card"><div class="stat-num">2</div><div class="stat-label">Demo</div></div>
+    <!-- ══════════════════════════════ HUMANIZER ══════════════════════════════ -->
+    <section id="page-humanizer" class="page">
+      <div class="page-header">
+        <div class="page-tag">Tool 03</div>
+        <h2 class="page-title">AI Text Humanizer</h2>
+        <p class="page-sub">Transform AI-generated text into natural, human-sounding academic writing</p>
       </div>
 
-      <div style="display:flex;gap:10px;margin:20px 0;align-items:center">
-        <input id="librarySearch" type="text" placeholder="Search papers…" style="flex:1;padding:9px 14px" oninput="renderLibrary()">
-        <button class="btn btn-ghost btn-sm" onclick="setLibView('grid')" id="btnGrid">⊞ Grid</button>
-        <button class="btn btn-ghost btn-sm" onclick="setLibView('list')" id="btnList">☰ List</button>
-      </div>
+      <div class="humanizer-layout">
+        <div class="humanizer-input-col">
+          <div class="col-label">Original Text</div>
+          <textarea id="humanizerInput" rows="16" placeholder="Paste AI-generated text here…&#10;&#10;The humanizer will rewrite it to sound natural, vary sentence structure, add academic voice, and remove AI patterns while keeping all facts intact."></textarea>
 
-      <div id="libraryGrid" class="library-grid"></div>
+          <div class="analysis-options">
+            <div class="option-label">Writing Style</div>
+            <div class="option-chips">
+              <span class="chip active" onclick="selectChip(this,'humanizerStyle','academic')">Academic</span>
+              <span class="chip" onclick="selectChip(this,'humanizerStyle','conversational')">Conversational</span>
+              <span class="chip" onclick="selectChip(this,'humanizerStyle','formal')">Formal</span>
+              <span class="chip" onclick="selectChip(this,'humanizerStyle','casual')">Casual</span>
+            </div>
+            <input type="hidden" id="humanizerStyle" value="academic">
+          </div>
+
+          <div class="analysis-options">
+            <div class="option-label">Intensity</div>
+            <div class="option-chips">
+              <span class="chip active" onclick="selectChip(this,'humanizerIntensity','moderate')">Moderate</span>
+              <span class="chip" onclick="selectChip(this,'humanizerIntensity','aggressive')">Aggressive</span>
+            </div>
+            <input type="hidden" id="humanizerIntensity" value="moderate">
+          </div>
+
+          <button class="btn btn-primary btn-full" onclick="runHumanizer()" id="humanizerBtn">
+            ✍️ Humanize Text
+          </button>
+        </div>
+
+        <div class="humanizer-output-col">
+          <div class="col-label">Humanized Result</div>
+          <div class="output-empty" id="humanizerEmpty" style="height:300px">
+            <div class="empty-icon">✍️</div>
+            <div>Humanized text will appear here</div>
+          </div>
+          <div id="humanizerLoading" style="display:none" class="loading-state">
+            <div class="loading-text">Humanizing your text…</div>
+            <div class="loading-bar"><div class="loading-fill"></div></div>
+          </div>
+          <div id="humanizerResult" style="display:none">
+            <div class="result-actions" style="margin-bottom:10px;justify-content:flex-end;display:flex;gap:8px">
+              <button class="btn btn-sm btn-ghost" onclick="copyOutput('humanizerOutput')">Copy</button>
+              <button class="btn btn-sm btn-ghost" onclick="downloadOutput('humanizerOutput','humanized')">Download</button>
+              <button class="btn btn-sm btn-ghost" onclick="runDetectorOnHumanized()">Check AI Score →</button>
+            </div>
+            <div class="result-content" id="humanizerOutput"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- ═══════════════════════════════ SETTINGS PAGE ═════════════════════════ -->
-    <section id="page-settings" class="page">
-      <div class="page-title">Settings</div>
-      <div class="page-sub">Configure your API key to enable AI features</div>
-
-      <div class="card" style="max-width:560px">
-        <div class="section-label">Anthropic API Key</div>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
-          Your key is stored only in your browser and never shared.
-          Get your free key at <a href="https://console.groq.com" target="_blank">console.groq.com</a>.
-          New accounts get <strong>$5 free credit</strong> — enough for hundreds of analyses.
-        </p>
-        <div style="display:flex;gap:10px">
-          <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." style="flex:1;padding:10px 14px" oninput="updateApiStatus()">
-          <button class="btn btn-primary" onclick="saveApiKey()">Save</button>
-        </div>
-        <div id="apiSaveMsg" style="font-size:13px;margin-top:10px;display:none"></div>
-
-        <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
-          <div class="section-label">Test Connection</div>
-          <button class="btn btn-ghost" onclick="testApiKey()" style="margin-top:8px">🔌 Test API Key</button>
-          <div id="testResult" style="font-size:13px;margin-top:10px;display:none"></div>
-        </div>
+    <!-- ══════════════════════════════ REFERENCES ═════════════════════════════ -->
+    <section id="page-references" class="page">
+      <div class="page-header">
+        <div class="page-tag">Tool 04</div>
+        <h2 class="page-title">Reference Manager</h2>
+        <p class="page-sub">Extract and format all citations from your paper in any academic style</p>
       </div>
 
-      <div class="card" style="max-width:560px;margin-top:16px">
-        <div class="section-label">About</div>
-        <p style="font-size:13px;color:var(--text2);line-height:1.7">
-          <strong style="color:var(--text)">ResearchJournalAnalyzer.me</strong> — AI-powered academic research tools.<br>
-          Built by Uttam Woli Sharma.<br>
-          Your PDFs are processed entirely in your browser. No data is stored on any server.
-        </p>
+      <div class="tool-layout">
+        <div class="tool-input">
+          <div class="upload-zone" id="refsUpload" onclick="document.getElementById('refsFile').click()"
+            ondragover="handleDragOver(event,'refsUpload')" ondragleave="handleDragLeave('refsUpload')" ondrop="handleDrop(event,'refsFile','refsUpload')">
+            <input type="file" id="refsFile" accept=".pdf" style="display:none" onchange="handleFileForTool(event,'refsContent','refsMeta')">
+            <div class="upload-icon">🗂️</div>
+            <div class="upload-hint">Drop PDF or click to upload</div>
+          </div>
+          <div class="file-meta" id="refsMeta" style="display:none"></div>
+
+          <div class="or-divider">or paste text directly</div>
+          <textarea id="refsContent" rows="8" placeholder="Paste paper content here…"></textarea>
+
+          <div class="analysis-options">
+            <div class="option-label">Citation Style</div>
+            <div class="option-chips" style="flex-wrap:wrap">
+              <span class="chip active" onclick="selectChip(this,'refStyle','APA')">APA</span>
+              <span class="chip" onclick="selectChip(this,'refStyle','MLA')">MLA</span>
+              <span class="chip" onclick="selectChip(this,'refStyle','Chicago')">Chicago</span>
+              <span class="chip" onclick="selectChip(this,'refStyle','Harvard')">Harvard</span>
+              <span class="chip" onclick="selectChip(this,'refStyle','Vancouver')">Vancouver</span>
+              <span class="chip" onclick="selectChip(this,'refStyle','IEEE')">IEEE</span>
+            </div>
+            <input type="hidden" id="refStyle" value="APA">
+          </div>
+
+          <button class="btn btn-primary btn-full" onclick="runReferences()" id="refsBtn">
+            🗂️ Extract References
+          </button>
+        </div>
+
+        <div class="tool-output">
+          <div class="output-empty" id="refsEmpty">
+            <div class="empty-icon">🗂️</div>
+            <div>Extracted references will appear here</div>
+          </div>
+          <div id="refsLoading" style="display:none" class="loading-state">
+            <div class="loading-text">Extracting references…</div>
+            <div class="loading-bar"><div class="loading-fill"></div></div>
+          </div>
+          <div id="refsResult" style="display:none">
+            <div class="result-header">
+              <span class="result-title" id="refsCount">References</span>
+              <div class="result-actions">
+                <button class="btn btn-sm btn-ghost" onclick="copyOutput('refsOutput')">Copy All</button>
+                <button class="btn btn-sm btn-ghost" onclick="downloadOutput('refsOutput','references')">Download</button>
+              </div>
+            </div>
+            <div id="refsCards"></div>
+            <div class="result-content" id="refsOutput" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════ MULTI-PAPER ════════════════════════════ -->
+    <section id="page-multi" class="page">
+      <div class="page-header">
+        <div class="page-tag">Tool 05</div>
+        <h2 class="page-title">Multi-Paper Synthesis</h2>
+        <p class="page-sub">Synthesize multiple papers for a comprehensive literature review</p>
+      </div>
+
+      <div class="multi-layout">
+        <div class="multi-papers">
+          <div class="multi-papers-header">
+            <div class="col-label">Papers (min. 2)</div>
+            <button class="btn btn-sm btn-ghost" onclick="addPaperSlot()">+ Add Paper</button>
+          </div>
+          <div id="multiPapers">
+            <div class="multi-paper-slot" data-index="0">
+              <div class="slot-num">01</div>
+              <textarea placeholder="Paste paper 1 content or title/abstract…" rows="5"></textarea>
+              <button class="slot-remove" onclick="removePaperSlot(this)" style="display:none">✕</button>
+            </div>
+            <div class="multi-paper-slot" data-index="1">
+              <div class="slot-num">02</div>
+              <textarea placeholder="Paste paper 2 content or title/abstract…" rows="5"></textarea>
+              <button class="slot-remove" onclick="removePaperSlot(this)" style="display:none">✕</button>
+            </div>
+          </div>
+
+          <div class="analysis-options" style="margin-top:16px">
+            <div class="option-label">Synthesis Type</div>
+            <div class="option-chips">
+              <span class="chip active" onclick="selectChip(this,'multiType','comprehensive')">Comprehensive</span>
+              <span class="chip" onclick="selectChip(this,'multiType','thematic')">Thematic</span>
+              <span class="chip" onclick="selectChip(this,'multiType','comparative')">Comparative</span>
+            </div>
+            <input type="hidden" id="multiType" value="comprehensive">
+          </div>
+
+          <button class="btn btn-primary btn-full" onclick="runMulti()" id="multiBtn" style="margin-top:16px">
+            📚 Synthesize Papers
+          </button>
+        </div>
+
+        <div class="tool-output">
+          <div class="output-empty" id="multiEmpty">
+            <div class="empty-icon">📚</div>
+            <div>Synthesis will appear here</div>
+          </div>
+          <div id="multiLoading" style="display:none" class="loading-state">
+            <div class="loading-text">Synthesizing papers…</div>
+            <div class="loading-bar"><div class="loading-fill"></div></div>
+          </div>
+          <div id="multiResult" style="display:none">
+            <div class="result-header">
+              <span class="result-title">Synthesis Complete</span>
+              <div class="result-actions">
+                <button class="btn btn-sm btn-ghost" onclick="copyOutput('multiOutput')">Copy</button>
+                <button class="btn btn-sm btn-ghost" onclick="downloadOutput('multiOutput','synthesis')">Download</button>
+              </div>
+            </div>
+            <div class="result-content" id="multiOutput"></div>
+          </div>
+        </div>
       </div>
     </section>
 
   </main>
 
-  <footer class="footer">
-    <span>ResearchJournalAnalyzer.me</span>
-    <span>© Developed by Uttam Woli Sharma</span>
-  </footer>
-
-  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="script.js"></script>
 </body>
