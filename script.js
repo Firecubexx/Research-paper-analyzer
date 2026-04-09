@@ -1,445 +1,465 @@
-// ─── State ────────────────────────────────────────────────────────────────────
-const DEMO_PAPERS = [
-  {
-    id: 'demo1', name: 'Basalt Fibre Reinforced Concrete – GPTMS Treatment.pdf',
-    size: '2.4 MB', analyzed: true, isDemo: true,
-    content: `This study investigates the effect of silane coupling agent GPTMS (3-Glycidoxypropyltrimethoxysilane) surface treatment on basalt fibres in fibre-reinforced concrete (FRC). FTIR spectroscopy confirmed successful silane bonding on fibre surfaces through shifts in the Si–O–Si stretch at 1020 cm⁻¹ and appearance of epoxy ring vibrations at 910 cm⁻¹. Mechanical testing showed treated fibres improved flexural strength by 18.4% and tensile strength by 12.7% compared to untreated controls at 0.5% volume fraction. The silane treatment significantly enhanced fibre-matrix interfacial adhesion, reducing fibre pull-out failure modes observed in SEM imaging. Pull-out load increased by 23% for GPTMS-treated specimens. Results suggest GPTMS-treated basalt fibres are viable sustainable alternatives to steel and synthetic fibres in structural concrete applications. Water absorption reduced by 8.2% indicating denser microstructure. W/C ratio 0.45, 28-day curing at 20°C.`
-  },
-  {
-    id: 'demo2', name: 'PVA Fibre Composites in Cementitious Matrices.pdf',
-    size: '1.8 MB', analyzed: true, isDemo: true,
-    content: `This paper examines PVA (polyvinyl alcohol) fibres as reinforcement in engineered cementitious composites (ECC). The study focused on fibre dispersion, volume fraction (0.5%, 1.0%, 2.0%), and surface modification effects on mechanical properties. Results demonstrated that 2% volume fraction with ozone surface treatment achieved the highest ductility with deflection hardening behaviour and strain capacity exceeding 3%. FTIR analysis confirmed hydroxyl group interactions at the fibre-cement interface with increased OH stretch at 3300 cm⁻¹. Compressive strength ranged 45–62 MPa while flexural strength reached up to 11.3 MPa at 2% Vf. The ozone treatment improved interfacial bonding by introducing carbonyl groups on fibre surfaces. Multiple cracking behaviour was observed with crack widths controlled below 60 μm.`
-  }
-];
-
-const PROXY_URL = 'https://rja-proxy-production.up.railway.app/proxy';
-
-let userPapers = [];
-let currentTool = 'summary';
-let selectedPaperIds = ['demo1'];
-let currentResult = '';
-let libView = 'grid';
-
-function allPapers() { return [...DEMO_PAPERS, ...userPapers]; }
+// ─── Config ───────────────────────────────────────────────────────────────────
+const PROXY = 'https://rja-proxy-production.up.railway.app/proxy'
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-  renderPapersList();
-  renderPaperSelectList();
-  renderLibrary();
-  updateCounts();
-
-  // Show API ready since key is in proxy
-  document.getElementById('apiStatus').innerHTML =
-    '<span class="dot dot-green"></span><span class="hide-mobile">API Ready</span>';
-});
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  showPage('home')
+})
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
-function showPage(pageId) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + pageId).classList.add('active');
-  document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
-  if (pageId === 'library') renderLibrary();
-  if (pageId === 'analyze') renderPaperSelectList();
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'))
+  const page = document.getElementById('page-' + id)
+  if (page) page.classList.add('active')
+  const btn = document.querySelector(`[data-page="${id}"]`)
+  if (btn) btn.classList.add('active')
+  window.scrollTo(0, 0)
 }
 
-// ─── PDF Upload ───────────────────────────────────────────────────────────────
-function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag'); }
-function handleDragLeave() { document.getElementById('uploadZone').classList.remove('drag'); }
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('uploadZone').classList.remove('drag');
-  handleFiles(e.dataTransfer.files);
+function toggleMobileNav() {
+  document.getElementById('mobileNav').classList.toggle('open')
 }
-function handleFileSelect(e) { handleFiles(e.target.files); }
 
-async function handleFiles(files) {
-  const pdfs = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
-  if (!pdfs.length) return;
+// ─── Chip selector ────────────────────────────────────────────────────────────
+function selectChip(el, hiddenId, value) {
+  el.closest('.option-chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'))
+  el.classList.add('active')
+  document.getElementById(hiddenId).value = value
+}
 
-  const titleEl = document.getElementById('uploadTitle');
-  const progressEl = document.getElementById('extractProgress');
-  const fillEl = document.getElementById('progressFill');
-  progressEl.style.display = 'block';
+// ─── PDF handling ─────────────────────────────────────────────────────────────
+function handleDragOver(e, zoneId) {
+  e.preventDefault()
+  document.getElementById(zoneId).classList.add('drag')
+}
+function handleDragLeave(zoneId) {
+  document.getElementById(zoneId).classList.remove('drag')
+}
+function handleDrop(e, inputId, zoneId) {
+  e.preventDefault()
+  document.getElementById(zoneId).classList.remove('drag')
+  const file = e.dataTransfer.files[0]
+  if (file) processFile(file, inputId, zoneId.replace('Upload', 'Meta'))
+}
+function handleFileForTool(e, contentId, metaId) {
+  const file = e.target.files[0]
+  if (file) processFile(file, contentId, metaId)
+}
 
-  for (let i = 0; i < pdfs.length; i++) {
-    const file = pdfs[i];
-    titleEl.textContent = `Extracting: ${file.name} (${i+1}/${pdfs.length})`;
-    fillEl.style.width = ((i / pdfs.length) * 100) + '%';
-
-    const id = 'u_' + Date.now() + '_' + i;
-    const draft = {
-      id, name: file.name,
-      size: (file.size / 1048576).toFixed(1) + ' MB',
-      analyzed: false, isDemo: false, content: ''
-    };
-    userPapers.push(draft);
-    renderPapersList();
-
-    try {
-      const text = await extractPdfText(file);
-      const idx = userPapers.findIndex(p => p.id === id);
-      if (idx !== -1) { userPapers[idx].content = text; userPapers[idx].analyzed = true; }
-    } catch {
-      const idx = userPapers.findIndex(p => p.id === id);
-      if (idx !== -1) userPapers[idx].content = '[Text extraction failed — try a different PDF]';
-    }
-    renderPapersList();
-    updateCounts();
+async function processFile(file, contentId, metaId) {
+  const meta = document.getElementById(metaId)
+  meta.style.display = 'flex'
+  meta.innerHTML = `⏳ Extracting text from <strong>${file.name}</strong>…`
+  try {
+    const text = await extractPdfText(file)
+    document.getElementById(contentId).value = text
+    meta.innerHTML = `✓ <strong>${file.name}</strong> — ${(file.size/1048576).toFixed(1)} MB · text extracted`
+    meta.style.color = 'var(--teal)'
+  } catch {
+    meta.innerHTML = `⚠️ Could not extract text — please paste manually`
+    meta.style.color = 'var(--red)'
   }
-
-  fillEl.style.width = '100%';
-  setTimeout(() => {
-    progressEl.style.display = 'none';
-    fillEl.style.width = '0%';
-    titleEl.textContent = 'Drop PDFs here or click to browse';
-  }, 800);
-
-  renderPaperSelectList();
-  updateCounts();
 }
 
 async function extractPdfText(file) {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let text = '';
-  for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items.map(item => item.str).join(' ') + '\n\n';
+  const ab = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise
+  let text = ''
+  for (let i = 1; i <= Math.min(pdf.numPages, 40); i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    text += content.items.map(it => it.str).join(' ') + '\n\n'
   }
-  return text.trim() || '[No extractable text — may be a scanned PDF]';
+  return text.trim() || '[No extractable text]'
 }
 
-// ─── Render Papers List ───────────────────────────────────────────────────────
-function renderPapersList() {
-  const list = document.getElementById('papersList');
-  const papers = allPapers();
-
-  document.getElementById('statsRow').style.display = 'grid';
-  document.getElementById('statTotal').textContent = papers.length;
-  document.getElementById('statReady').textContent = papers.filter(p => p.analyzed).length;
-
-  list.innerHTML = papers.map(p => `
-    <div class="paper-item">
-      <span class="paper-icon">📄</span>
-      <div class="paper-info">
-        <div class="paper-name">${escHtml(p.name)}</div>
-        <div class="paper-meta">${p.size}</div>
-        ${p.content ? `<div class="paper-preview">${escHtml(p.content.substring(0,120))}…</div>` : ''}
-      </div>
-      <div class="paper-badges">
-        <span class="badge ${p.analyzed ? 'badge-success' : 'badge-warn'}">${p.analyzed ? '✓ Ready' : '○ Pending'}</span>
-        ${p.isDemo ? '<span class="badge badge-accent">Demo</span>' : ''}
-        ${!p.isDemo ? `<button class="btn btn-danger btn-sm" onclick="removePaper('${p.id}')">✕</button>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-function removePaper(id) {
-  userPapers = userPapers.filter(p => p.id !== id);
-  selectedPaperIds = selectedPaperIds.filter(x => x !== id);
-  renderPapersList();
-  renderPaperSelectList();
-  updateCounts();
-}
-
-function updateCounts() {
-  document.getElementById('uploadCount').textContent = userPapers.length + ' uploaded';
-  document.getElementById('statTotal').textContent = allPapers().length;
-  document.getElementById('statReady').textContent = allPapers().filter(p=>p.analyzed).length;
-  document.getElementById('libTotal').textContent = allPapers().length;
-  document.getElementById('libReady').textContent = allPapers().filter(p=>p.analyzed).length;
-  document.getElementById('libUploaded').textContent = userPapers.length;
-}
-
-// ─── Tool selection ───────────────────────────────────────────────────────────
-function selectTool(tool) {
-  currentTool = tool;
-  document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
-  document.querySelector(`[data-tool="${tool}"]`).classList.add('active');
-
-  const textCard = document.getElementById('textInputCard');
-  const refCard = document.getElementById('refStyleCard');
-  const textLabel = document.getElementById('textInputLabel');
-  const textInput = document.getElementById('textInput');
-
-  textCard.style.display = (tool==='detector'||tool==='humanizer') ? 'block' : 'none';
-  refCard.style.display = (tool==='references') ? 'block' : 'none';
-
-  if (tool==='detector') {
-    textLabel.textContent = 'Or paste text to check';
-    textInput.placeholder = 'Paste abstract or section here…';
-  } else if (tool==='humanizer') {
-    textLabel.textContent = 'Text to humanize (required)';
-    textInput.placeholder = 'Paste AI-generated text here…';
+// ─── API call ─────────────────────────────────────────────────────────────────
+async function callAI(prompt, system = '') {
+  const body = {
+    model: 'llama-3.3-70b-versatile',
+    max_tokens: 2000,
+    messages: [{ role: 'user', content: prompt }]
   }
+  if (system) body.system = system
 
-  const labels = { summary:'Deep Summary', detector:'AI Detector', humanizer:'Humanizer', multisummary:'Multi-Paper Synthesis', references:'References' };
-  document.getElementById('runBtn').innerHTML = `🚀 Run ${labels[tool]}`;
-  resetResults();
-}
-
-// ─── Paper select list ────────────────────────────────────────────────────────
-function renderPaperSelectList() {
-  const list = document.getElementById('paperSelectList');
-  const papers = allPapers();
-  if (!papers.length) {
-    list.innerHTML = '<p style="color:var(--text3);font-size:13px;padding:8px 0">Upload papers on the Papers tab first</p>';
-    return;
-  }
-  list.innerHTML = papers.map(p => `
-    <div class="paper-select-item ${selectedPaperIds.includes(p.id)?'selected':''}" onclick="togglePaperSelect('${p.id}')">
-      <span>${selectedPaperIds.includes(p.id)?'☑':'☐'}</span>
-      <span class="paper-select-name">${escHtml(p.name)}</span>
-      ${p.isDemo ? '<span class="badge badge-accent" style="font-size:10px">Demo</span>' : ''}
-    </div>
-  `).join('');
-}
-
-function togglePaperSelect(id) {
-  if (selectedPaperIds.includes(id)) {
-    selectedPaperIds = selectedPaperIds.filter(x => x !== id);
-  } else {
-    selectedPaperIds.push(id);
-  }
-  renderPaperSelectList();
-}
-
-// ─── Run Analysis ─────────────────────────────────────────────────────────────
-async function runAnalysis() {
-  const sel = allPapers().filter(p => selectedPaperIds.includes(p.id));
-
-  if (!sel.length && currentTool !== 'humanizer') { showAnalyzeError('Select at least one paper.'); return; }
-  if (currentTool === 'multisummary' && sel.length < 2) { showAnalyzeError('Select at least 2 papers for Multi-Paper Synthesis.'); return; }
-  if (currentTool === 'humanizer' && !document.getElementById('textInput').value.trim()) {
-    showAnalyzeError('Paste text into the text box to humanize.'); return;
-  }
-
-  hideAnalyzeError();
-  setLoadingState(true);
-
-  const textInput = document.getElementById('textInput').value.trim();
-  const refStyle = document.getElementById('refStyle').value;
-  const paperContents = sel.map(p => p.content);
-  const paperNames = sel.map(p => p.name);
-
-  try {
-    const prompt = buildPrompt(currentTool, paperContents, paperNames, textInput, refStyle);
-    const result = await callClaude(prompt);
-    currentResult = result;
-    showResult(result);
-  } catch (e) {
-    setLoadingState(false);
-    showAnalyzeError('Error: ' + e.message);
-  }
-}
-
-function buildPrompt(tool, contents, names, textInput, refStyle) {
-  switch (tool) {
-    case 'summary': {
-      const body = contents.map((c,i) => `PAPER ${i+1}: ${names[i]}\n${c}`).join('\n\n---\n\n');
-      return `You are an expert academic analyst. Provide a comprehensive deep analysis with these sections:\n\n1. **Research Objective & Hypothesis**\n2. **Methodology** (materials, methods, experimental design)\n3. **Key Findings** (with specific numbers and data points)\n4. **Contributions to the Field**\n5. **Limitations**\n6. **Future Research Directions**\n7. **One-line Verdict**\n\nPaper:\n${body}`;
-    }
-    case 'detector': {
-      const text = textInput || contents.join('\n\n');
-      return `You are an expert AI content detector. Analyze the following text:\n\n1. Overall AI probability score (show as X%)\n2. Section-by-section breakdown with individual scores\n3. Specific phrases or patterns that indicate AI writing\n4. Confidence level\n5. Which AI model likely generated it (if detectable)\n\nText:\n${text.substring(0,4000)}`;
-    }
-    case 'humanizer': {
-      return `Rewrite the following text to sound completely human-written for academic publication:\n- Vary sentence length and structure naturally\n- Use contractions and natural academic transitions\n- Add hedging language (seems, suggests, appears to)\n- Remove repetitive AI patterns and filler phrases\n- Keep all facts, numbers, and citations intact\n- Write as a researcher would naturally draft prose\n\nOriginal text:\n${textInput}`;
-    }
-    case 'multisummary': {
-      const body = contents.map((c,i) => `PAPER ${i+1}: ${names[i]}\n${c}`).join('\n\n---\n\n');
-      return `Synthesize these ${contents.length} research papers with:\n\n1. **Common Themes** across all papers\n2. **Contrasting Findings** or methodological differences\n3. **Combined Contribution** to the field\n4. **Research Gaps** identified collectively\n5. **Recommended Citation Order** for a literature review\n6. **Synthesis Paragraph** (ready to paste into a literature review section)\n\nPapers:\n${body}`;
-    }
-    case 'references': {
-      const body = contents.map((c,i) => `PAPER: ${names[i]}\n${c}`).join('\n\n');
-      return `Extract all references and bibliographic information. Format each as a ${refStyle} citation. Include:\n1. The papers themselves as citable works\n2. Any papers cited within them\n3. Each reference on its own numbered line\n\nContent:\n${body}`;
-    }
-    default: return '';
-  }
-}
-
-// ─── API call via proxy ───────────────────────────────────────────────────────
-async function callClaude(prompt) {
-  const response = await fetch(PROXY_URL, {
+  const r = await fetch(PROXY, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-opus-4-5',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  const data = await response.json();
-  if (data.error) throw new Error(data.error.message || 'API error');
-  return data.content?.[0]?.text || 'No response received.';
+    body: JSON.stringify(body)
+  })
+  const data = await r.json()
+  if (data.error) throw new Error(data.error.message)
+  return data.content?.[0]?.text || 'No response received.'
 }
 
-// ─── Show results ─────────────────────────────────────────────────────────────
-function showResult(text) {
-  setLoadingState(false);
-  document.getElementById('resultEmpty').style.display = 'none';
-  document.getElementById('resultState').style.display = 'block';
+// ─── UI helpers ──────────────────────────────────────────────────────────────
+function setLoading(tool, on) {
+  document.getElementById(tool + 'Empty').style.display = on ? 'none' : 'flex'
+  document.getElementById(tool + 'Loading').style.display = on ? 'block' : 'none'
+  document.getElementById(tool + 'Result').style.display = on ? 'none' : 'block'
+  const btn = document.getElementById(tool + 'Btn')
+  if (btn) btn.disabled = on
+}
 
-  const scoreCard = document.getElementById('scoreCard');
-  if (currentTool === 'detector') {
-    const match = text.match(/(\d{1,3})\s*%/);
+function showResult(tool) {
+  document.getElementById(tool + 'Empty').style.display = 'none'
+  document.getElementById(tool + 'Loading').style.display = 'none'
+  document.getElementById(tool + 'Result').style.display = 'block'
+}
+
+function showError(tool, msg) {
+  document.getElementById(tool + 'Empty').style.display = 'none'
+  document.getElementById(tool + 'Loading').style.display = 'none'
+  document.getElementById(tool + 'Result').style.display = 'none'
+  const btn = document.getElementById(tool + 'Btn')
+  if (btn) btn.disabled = false
+
+  // show error in output area
+  const output = document.querySelector(`#page-${tool === 'analyze' ? 'analyze' : tool === 'detector' ? 'detector' : tool} .tool-output`) ||
+                 document.querySelector(`#page-${tool} .humanizer-output-col`) ||
+                 document.querySelector(`#page-${tool} .tool-output`)
+  if (!output) return
+  let errEl = output.querySelector('.error-msg')
+  if (!errEl) { errEl = document.createElement('div'); errEl.className = 'error-msg'; output.appendChild(errEl) }
+  errEl.style.display = 'block'
+  errEl.textContent = '⚠️ ' + msg
+  errEl.style.margin = '20px'
+  document.getElementById(tool + 'Empty').style.display = 'flex'
+}
+
+function getContent(id) {
+  return (document.getElementById(id)?.value || '').trim()
+}
+
+// ─── PAPER ANALYSIS ───────────────────────────────────────────────────────────
+async function runAnalysis() {
+  const content = getContent('analyzeContent')
+  if (!content) { alert('Please upload a PDF or paste paper content first.'); return }
+  const depth = document.getElementById('analyzeDepth').value
+
+  setLoading('analyze', true)
+
+  const depthPrompts = {
+    standard: `Provide a structured analysis with: 1. Research Objective, 2. Methodology, 3. Key Findings (with data), 4. Contributions, 5. Limitations, 6. Verdict`,
+    deep: `Provide an exhaustive analysis with: 1. Research Objective & Hypothesis, 2. Theoretical Framework, 3. Detailed Methodology (design, materials, procedures, controls), 4. Key Findings (all numerical data, statistical results), 5. Discussion & Interpretation, 6. Contributions to the field, 7. Limitations & Weaknesses, 8. Future Research Directions, 9. Practical Implications, 10. Critical Verdict`,
+    critical: `Perform a critical peer-review style analysis: 1. Research Objective & Clarity, 2. Methodological Rigor (critique experimental design, sample sizes, controls), 3. Results Analysis (validate data, check statistical methods), 4. Discussion Quality, 5. Identify Gaps & Weaknesses, 6. Comparison to existing literature, 7. Reproducibility Assessment, 8. Overall Quality Score (1-10 with justification)`
+  }
+
+  const prompt = `You are an expert academic researcher and peer reviewer. ${depthPrompts[depth]}
+
+Paper content:
+${content.substring(0, 8000)}`
+
+  try {
+    const result = await callAI(prompt)
+    document.getElementById('analyzeOutput').textContent = result
+    showResult('analyze')
+  } catch (e) {
+    showError('analyze', e.message)
+  }
+  document.getElementById('analyzeBtn').disabled = false
+}
+
+// ─── AI DETECTOR ─────────────────────────────────────────────────────────────
+async function runDetector() {
+  const content = getContent('detectorContent')
+  if (!content) { alert('Please upload a PDF or paste text to analyze.'); return }
+  const mode = document.getElementById('detectorMode').value
+
+  setLoading('detector', true)
+
+  const modeInstructions = {
+    standard: 'Standard analysis for general academic text',
+    academic: 'Focus specifically on academic writing patterns — look for AI-typical literature review phrases, methodology descriptions, and conclusion patterns common in AI-generated academic papers',
+    strict: 'Apply strict detection — flag ANY sentence that shows AI patterns even if subtle. Be aggressive in detection.'
+  }
+
+  const prompt = `You are an expert AI content detection system with deep knowledge of linguistic patterns, perplexity analysis, and writing style fingerprinting. Mode: ${modeInstructions[mode]}
+
+Analyze the following text for AI-generated content and provide:
+
+1. OVERALL AI PROBABILITY SCORE: X% (give a single clear percentage)
+2. CONFIDENCE LEVEL: (Low/Medium/High)
+3. LIKELY SOURCE: (e.g., GPT-4, Claude, Gemini, Human, or Mixed)
+
+4. SENTENCE-LEVEL ANALYSIS:
+   - Flag each suspicious sentence/paragraph
+   - Label as: [HIGH RISK] [MEDIUM RISK] [LOW RISK] [HUMAN]
+   - Explain why
+
+5. AI PATTERN SIGNALS DETECTED:
+   - List specific linguistic patterns found (e.g., "excessive hedging", "formulaic transitions", "uniform sentence rhythm", "lack of personal voice", "perfect paragraph structure")
+
+6. HUMAN SIGNALS DETECTED:
+   - Any markers suggesting human authorship
+
+7. DETAILED VERDICT:
+   - Summary of findings
+   - Specific recommendations for the author
+
+Text to analyze:
+${content.substring(0, 6000)}`
+
+  try {
+    const result = await callAI(prompt, 'You are an expert AI content detector. Always provide a clear numerical probability score.')
+    document.getElementById('detectorOutput').textContent = result
+
+    // Extract score
+    const match = result.match(/(\d{1,3})\s*%/)
     if (match) {
-      const score = Math.min(100, parseInt(match[1]));
-      scoreCard.style.display = 'block';
-      document.getElementById('scoreNum').textContent = score + '%';
-      document.getElementById('scoreNum').style.color = score > 70 ? 'var(--danger)' : score > 40 ? 'var(--warn)' : 'var(--accent4)';
-      document.getElementById('scoreBar').style.width = score + '%';
-      document.getElementById('scoreBar').style.background = score > 70
-        ? 'linear-gradient(90deg,var(--warn),var(--danger))'
-        : score > 40 ? 'linear-gradient(90deg,var(--accent4),var(--warn))'
-        : 'linear-gradient(90deg,var(--accent),var(--accent4))';
-      document.getElementById('scoreLabel').textContent = score > 70
-        ? '⚠️ High AI probability — review carefully'
-        : score > 40 ? '⚡ Mixed content detected'
-        : '✅ Likely human-written';
+      const score = Math.min(100, parseInt(match[1]))
+      animateScore(score)
     }
-  } else {
-    scoreCard.style.display = 'none';
+    showResult('detector')
+  } catch (e) {
+    showError('detector', e.message)
   }
-
-  document.getElementById('resultBox').innerHTML = `<pre>${escHtml(text)}</pre>`;
-
-  const refsCard = document.getElementById('refsCard');
-  if (currentTool === 'references') {
-    const lines = text.split('\n').filter(l => /^\d+[\.\)]/.test(l.trim()));
-    if (lines.length) {
-      refsCard.style.display = 'block';
-      const refStyle = document.getElementById('refStyle').value;
-      document.getElementById('refsLabel').textContent = `${refStyle} References (${lines.length})`;
-      document.getElementById('refsList').innerHTML = lines.map((l, i) => {
-        const clean = escHtml(l.replace(/^\d+[\.\)]\s*/, ''));
-        return `<div class="ref-item">
-          <div class="ref-num">[${i+1}]</div>
-          <div class="ref-text">${clean}</div>
-          <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="copyText(\`${l.replace(/`/g,"'")}\`)">Copy</button>
-        </div>`;
-      }).join('');
-    }
-  } else {
-    refsCard.style.display = 'none';
-  }
+  document.getElementById('detectorBtn').disabled = false
 }
 
-function resetResults() {
-  document.getElementById('resultEmpty').style.display = 'block';
-  document.getElementById('resultState').style.display = 'none';
-  document.getElementById('loadingState').style.display = 'none';
-  hideAnalyzeError();
-}
+function animateScore(score) {
+  const numEl = document.getElementById('scoreNum')
+  const verdictEl = document.getElementById('scoreVerdict')
+  const circle = document.getElementById('scoreCircle')
 
-function setLoadingState(loading) {
-  const btn = document.getElementById('runBtn');
-  if (loading) {
-    document.getElementById('resultEmpty').style.display = 'none';
-    document.getElementById('resultState').style.display = 'none';
-    document.getElementById('loadingState').style.display = 'block';
-    btn.disabled = true;
-    btn.innerHTML = '<span class="dots"><span class="dot-anim"></span><span class="dot-anim"></span><span class="dot-anim"></span></span> Analyzing…';
+  const color = score > 70 ? '#ff6b6b' : score > 40 ? '#fbbf24' : '#4ade80'
+  numEl.textContent = score + '%'
+  numEl.style.color = color
+  circle.style.stroke = color
+
+  const circumference = 251
+  const offset = circumference - (score / 100) * circumference
+  setTimeout(() => {
+    circle.style.transition = 'stroke-dashoffset 1s ease'
+    circle.style.strokeDashoffset = offset
+  }, 100)
+
+  if (score > 70) {
+    verdictEl.textContent = '⚠️ High AI probability'
+    verdictEl.style.color = '#ff6b6b'
+  } else if (score > 40) {
+    verdictEl.textContent = '⚡ Mixed content'
+    verdictEl.style.color = '#fbbf24'
   } else {
-    document.getElementById('loadingState').style.display = 'none';
-    btn.disabled = false;
-    const labels = { summary:'Deep Summary', detector:'AI Detector', humanizer:'Humanizer', multisummary:'Multi-Paper Synthesis', references:'References' };
-    btn.innerHTML = `🚀 Run ${labels[currentTool]}`;
+    verdictEl.textContent = '✅ Likely human-written'
+    verdictEl.style.color = '#4ade80'
   }
 }
 
-function showAnalyzeError(msg) {
-  const el = document.getElementById('analyzeError');
-  el.style.display = 'block';
-  el.textContent = '⚠️ ' + msg;
+// ─── HUMANIZER ────────────────────────────────────────────────────────────────
+async function runHumanizer() {
+  const content = getContent('humanizerInput')
+  if (!content) { alert('Please paste text to humanize.'); return }
+  const style = document.getElementById('humanizerStyle').value
+  const intensity = document.getElementById('humanizerIntensity').value
+
+  document.getElementById('humanizerBtn').disabled = true
+  document.getElementById('humanizerEmpty').style.display = 'none'
+  document.getElementById('humanizerLoading').style.display = 'block'
+  document.getElementById('humanizerResult').style.display = 'none'
+
+  const styleGuide = {
+    academic: 'formal academic writing with disciplinary vocabulary, hedging language, and scholarly tone',
+    conversational: 'conversational yet intelligent tone, approachable language, natural flow',
+    formal: 'highly formal, professional writing suitable for official documents',
+    casual: 'relaxed, casual tone with contractions and everyday language'
+  }
+
+  const intensityGuide = {
+    moderate: 'Make moderate changes — preserve the general structure but humanize language and flow',
+    aggressive: 'Completely rewrite — change sentence structures drastically, reorder ideas, use entirely different phrasing while keeping all facts'
+  }
+
+  const prompt = `You are an expert academic ghostwriter who specializes in making AI-generated text sound authentically human.
+
+Style: ${styleGuide[style]}
+Intensity: ${intensityGuide[intensity]}
+
+Rewriting rules:
+- Vary sentence length dramatically (mix very short and long sentences)
+- Use natural transitions instead of formulaic ones ("Furthermore" → "What's interesting here is")
+- Add subtle uncertainty markers ("it seems", "arguably", "one might argue")
+- Include occasional rhetorical questions
+- Break perfect paragraph symmetry
+- Use active voice more than passive
+- Add discipline-specific jargon naturally
+- Remove all AI "tells": "It is worth noting", "In conclusion", "This paper aims to", "It is important to"
+- Keep ALL facts, numbers, citations, and technical accuracy 100% intact
+- Do NOT add any new information
+
+Return ONLY the rewritten text, no commentary or explanation.
+
+Original text:
+${content}`
+
+  try {
+    const result = await callAI(prompt)
+    document.getElementById('humanizerOutput').textContent = result
+    document.getElementById('humanizerLoading').style.display = 'none'
+    document.getElementById('humanizerResult').style.display = 'block'
+  } catch (e) {
+    document.getElementById('humanizerLoading').style.display = 'none'
+    document.getElementById('humanizerEmpty').style.display = 'flex'
+    alert('Error: ' + e.message)
+  }
+  document.getElementById('humanizerBtn').disabled = false
 }
-function hideAnalyzeError() {
-  document.getElementById('analyzeError').style.display = 'none';
+
+function runDetectorOnHumanized() {
+  const text = document.getElementById('humanizerOutput').textContent
+  if (!text) return
+  document.getElementById('detectorContent').value = text
+  showPage('detector')
+  setTimeout(() => runDetector(), 300)
+}
+
+// ─── REFERENCES ───────────────────────────────────────────────────────────────
+async function runReferences() {
+  const content = getContent('refsContent')
+  if (!content) { alert('Please upload a PDF or paste paper content first.'); return }
+  const style = document.getElementById('refStyle').value
+
+  setLoading('refs', true)
+
+  const prompt = `You are a professional academic librarian and citation expert.
+
+Extract ALL references and citations from the following paper content. Format each one in ${style} style.
+
+Requirements:
+- Number each reference
+- Include: authors, year, title, journal/publisher, volume, issue, pages, DOI if present
+- If information is incomplete, include what is available
+- Separate each reference with a new line
+- Also identify the paper itself as a citable work at the top
+
+Return a clean numbered list only.
+
+Content:
+${content.substring(0, 8000)}`
+
+  try {
+    const result = await callAI(prompt)
+    document.getElementById('refsOutput').textContent = result
+
+    // Parse into cards
+    const lines = result.split('\n').filter(l => /^\d+[\.\)]/.test(l.trim()))
+    document.getElementById('refsCount').textContent = `${style} References (${lines.length})`
+    document.getElementById('refsCards').innerHTML = lines.map((l, i) => {
+      const clean = l.replace(/^\d+[\.\)]\s*/, '')
+      return `<div class="ref-card">
+        <div class="ref-num">[${i+1}]</div>
+        <div class="ref-text">${escHtml(clean)}</div>
+        <button class="ref-copy" onclick="copyText('${escHtml(clean).replace(/'/g,"\\'")}', this)">Copy citation</button>
+      </div>`
+    }).join('')
+
+    showResult('refs')
+  } catch (e) {
+    showError('refs', e.message)
+  }
+  document.getElementById('refsBtn').disabled = false
+}
+
+// ─── MULTI-PAPER ─────────────────────────────────────────────────────────────
+function addPaperSlot() {
+  const container = document.getElementById('multiPapers')
+  const count = container.querySelectorAll('.multi-paper-slot').length + 1
+  const slot = document.createElement('div')
+  slot.className = 'multi-paper-slot'
+  slot.innerHTML = `
+    <div class="slot-num">${String(count).padStart(2,'0')}</div>
+    <textarea placeholder="Paste paper ${count} content or abstract…" rows="5"></textarea>
+    <button class="slot-remove" onclick="removePaperSlot(this)">✕</button>
+  `
+  container.appendChild(slot)
+}
+
+function removePaperSlot(btn) {
+  btn.closest('.multi-paper-slot').remove()
+  document.querySelectorAll('.multi-paper-slot').forEach((s, i) => {
+    s.querySelector('.slot-num').textContent = String(i+1).padStart(2,'0')
+    s.querySelector('.slot-remove').style.display = i < 2 ? 'none' : 'block'
+  })
+}
+
+async function runMulti() {
+  const slots = document.querySelectorAll('#multiPapers textarea')
+  const papers = Array.from(slots).map(t => t.value.trim()).filter(Boolean)
+  if (papers.length < 2) { alert('Please add at least 2 papers.'); return }
+  const type = document.getElementById('multiType').value
+
+  setLoading('multi', true)
+
+  const typeInstructions = {
+    comprehensive: `Provide a comprehensive synthesis with:
+1. OVERVIEW: Brief description of all papers
+2. COMMON THEMES: Shared topics, methods, or findings across papers
+3. CONTRASTING FINDINGS: Where papers disagree or differ in approach
+4. METHODOLOGICAL COMPARISON: How each paper's methods compare
+5. COMBINED CONTRIBUTION: What these papers collectively add to the field
+6. RESEARCH GAPS: What questions remain unanswered collectively
+7. SYNTHESIS PARAGRAPH: A ready-to-use literature review paragraph (250-300 words) citing all papers
+8. RECOMMENDED CITATION ORDER: How to cite them in a literature review`,
+    thematic: `Group and analyze the papers by themes:
+1. Identify 3-5 major themes across all papers
+2. For each theme: which papers address it and how
+3. How themes interconnect
+4. Thematic synthesis paragraph ready for a literature review`,
+    comparative: `Direct comparison of all papers:
+1. Side-by-side methodology comparison
+2. Results comparison (use specific data)
+3. Strengths and weaknesses of each
+4. Which paper is most rigorous and why
+5. Comparative synthesis paragraph`
+  }
+
+  const content = papers.map((p, i) => `PAPER ${i+1}:\n${p.substring(0, 3000)}`).join('\n\n---\n\n')
+  const prompt = `You are an expert academic researcher specializing in systematic literature reviews.
+
+${typeInstructions[type]}
+
+Papers to synthesize:
+${content}`
+
+  try {
+    const result = await callAI(prompt)
+    document.getElementById('multiOutput').textContent = result
+    showResult('multi')
+  } catch (e) {
+    showError('multi', e.message)
+  }
+  document.getElementById('multiBtn').disabled = false
 }
 
 // ─── Copy / Download ──────────────────────────────────────────────────────────
-function copyResult() {
-  navigator.clipboard.writeText(currentResult);
-  const btn = event.target;
-  btn.textContent = '✓ Copied';
-  setTimeout(() => btn.textContent = '📋 Copy', 2000);
-}
-function copyText(text) {
-  navigator.clipboard.writeText(text);
-  const btn = event.target;
-  btn.textContent = '✓';
-  setTimeout(() => btn.textContent = 'Copy', 1500);
-}
-function downloadResult() {
-  const blob = new Blob([currentResult], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `analysis_${currentTool}_${Date.now()}.txt`;
-  a.click();
+function copyOutput(id) {
+  const text = document.getElementById(id)?.textContent || ''
+  navigator.clipboard.writeText(text)
+  event.target.textContent = '✓ Copied'
+  setTimeout(() => event.target.textContent = 'Copy', 2000)
 }
 
-// ─── Library ──────────────────────────────────────────────────────────────────
-function setLibView(v) {
-  libView = v;
-  document.getElementById('btnGrid').classList.toggle('btn-primary', v==='grid');
-  document.getElementById('btnList').classList.toggle('btn-primary', v==='list');
-  document.getElementById('btnGrid').classList.toggle('btn-ghost', v!=='grid');
-  document.getElementById('btnList').classList.toggle('btn-ghost', v!=='list');
-  renderLibrary();
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text)
+  btn.textContent = '✓ Copied'
+  setTimeout(() => btn.textContent = 'Copy citation', 1500)
 }
 
-function renderLibrary() {
-  updateCounts();
-  const search = (document.getElementById('librarySearch')?.value || '').toLowerCase();
-  const papers = allPapers().filter(p => p.name.toLowerCase().includes(search));
-  const container = document.getElementById('libraryGrid');
-  if (!papers.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div>No papers found</div></div>'; return; }
-
-  if (libView === 'grid') {
-    container.style.display = 'grid';
-    container.innerHTML = papers.map(p => `
-      <div class="lib-card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-          <span style="font-size:26px">📄</span>
-          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
-            <span class="badge ${p.analyzed?'badge-success':'badge-warn'}">${p.analyzed?'✓ Ready':'○ Pending'}</span>
-            ${p.isDemo?'<span class="badge badge-accent">Demo</span>':''}
-          </div>
-        </div>
-        <div style="font-weight:600;font-size:13px;line-height:1.4;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(p.name)}</div>
-        <div style="font-size:12px;color:var(--text3)">${p.size}</div>
-        ${p.content?`<div style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${escHtml(p.content.substring(0,220))}…</div>`:''}
-      </div>
-    `).join('');
-  } else {
-    container.style.display = 'block';
-    container.innerHTML = papers.map(p => `
-      <div class="lib-list-item">
-        <span style="font-size:20px;flex-shrink:0">📄</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.name)}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">${p.size}</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-          <span class="badge ${p.analyzed?'badge-success':'badge-warn'}">${p.analyzed?'✓ Ready':'○ Pending'}</span>
-          ${p.isDemo?'<span class="badge badge-accent">Demo</span>':''}
-        </div>
-      </div>
-    `).join('');
-  }
+function downloadOutput(id, name) {
+  const text = document.getElementById(id)?.textContent || ''
+  const blob = new Blob([text], { type: 'text/plain' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `${name}_${Date.now()}.txt`
+  a.click()
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 function escHtml(str) {
   return String(str)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    .replace(/"/g,'&quot;')
 }
